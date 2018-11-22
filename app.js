@@ -7,6 +7,7 @@ var logger = require('morgan');
 var indexRouter = require('./routes/index');
 var usersRouter = require('./routes/users');
 const mongoose = require('mongoose');
+var async = require('async');
 mongoose.connect('mongodb://localhost/test', { useNewUrlParser: true });
 
 var db = mongoose.connection;
@@ -24,7 +25,7 @@ db.on('error', function (err) {
 
 var app = express();
 
-var Article = require('./createDb');
+var Article = require('./schemas/article');
 var article = new Article({
   title: 'Test',
   author: 'Test author'
@@ -35,6 +36,19 @@ article.save(function (error) {
   if (error) {
     console.log(error);
   }
+});
+
+var User = require('./schemas/users');
+const users = [
+  { name: 'Lyuda', age: 22 },
+  { name: 'Misha', age: 21 }
+];
+async.each(users, function (userItem) {
+  console.log(userItem);
+  let user = new User(userItem);
+  user.save(function () {
+    console.log(`user ${user.name} saved!`);
+  })
 })
 
 // view engine setup
@@ -48,7 +62,24 @@ app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
 
 app.use('/', indexRouter);
-app.use('/users', usersRouter);
+app.get('/users', function (req, res, next) {
+  User.find({}, function (error, users) {
+    res.json(users);
+  }, function () {
+    
+  })
+});
+app.get('/users/:id', function (req, res, error) {
+  console.log(req.params.id);
+  User.findById(req.params.id, function (error, user) {
+    if (!user) {
+      next(new HttpError(404, 'User not found'));
+    } else {
+      res.json(user);
+    }
+
+  })
+})
 app.use('/article', function (req, res) {
   Article.find({}, function (error, articles) {
     if (error) {
