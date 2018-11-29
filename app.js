@@ -3,6 +3,7 @@ var express = require('express');
 var path = require('path');
 var cookieParser = require('cookie-parser');
 var logger = require('morgan');
+var ObjectId = require('mongodb').ObjectId;
 
 var indexRouter = require('./routes/index');
 var usersRouter = require('./routes/users');
@@ -11,7 +12,8 @@ var async = require('async');
 mongoose.connect('mongodb://localhost/test', { useNewUrlParser: true });
 
 var db = mongoose.connection;
-
+var HttpError = require('./error/index').HttpError;
+console.log(HttpError);
 db.once('open', function (error) {
   if (error) {
     console.log('Eror');
@@ -69,11 +71,18 @@ app.get('/users', function (req, res, next) {
     
   })
 });
-app.get('/users/:id', function (req, res, error) {
-  console.log(req.params.id);
-  User.findById(req.params.id, function (error, user) {
+app.get('/users/:id', function (req, res, next) {
+  try {
+    var id = new ObjectId(req.params.id);
+    console.log(id);
+  } catch (e) {
+    return next(new HttpError(404, 'User not found111'));
+  }
+
+
+  User.findById(id, function (error, user) {
     if (!user) {
-      next(new HttpError(404, 'User not found'));
+      next(new HttpError(404, 'Objecy ID'));
     } else {
       res.json(user);
     }
