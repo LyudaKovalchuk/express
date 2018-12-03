@@ -2,6 +2,8 @@ var createError = require('http-errors');
 var express = require('express');
 var path = require('path');
 var cookieParser = require('cookie-parser');
+var bodyParser = require('body-parser');
+var session = require('express-session');
 var logger = require('morgan');
 var ObjectId = require('mongodb').ObjectId;
 
@@ -61,6 +63,13 @@ app.use(logger('dev'));
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
+const MongoStore = require('connect-mongo')(session);
+app.use(session({
+  secret: 'vfdfjvnjd',
+  saveUninitialized: true,
+  resave: true,
+  store: new MongoStore({mongooseConnection: mongoose.connection})
+}))
 app.use(express.static(path.join(__dirname, 'public')));
 
 app.use('/', indexRouter);
@@ -72,6 +81,16 @@ app.get('/users', function (req, res, next) {
   })
 });
 app.get('/users/:id', function (req, res, next) {
+  if(req.session.page_views){
+    req.session.page_views++;
+    res.setHeader('Content-Type', 'text/html')
+    res.write('<p>views: ' + req.session.page_views + '</p>')
+    res.write('<p>expires in: ' + (req.session.cookie.maxAge / 1000) + 's</p>')
+    res.end()
+  } else {
+    req.session.page_views = 1;
+    res.end("Welcome to this page for the first time!");
+  }
   try {
     var id = new ObjectId(req.params.id);
     console.log(id);
