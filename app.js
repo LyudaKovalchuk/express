@@ -5,12 +5,11 @@ var cookieParser = require('cookie-parser');
 var bodyParser = require('body-parser');
 var session = require('express-session');
 var logger = require('morgan');
-var ObjectId = require('mongodb').ObjectId;
+const cors = require('cors');
 
 var indexRouter = require('./routes/index');
-var usersRouter = require('./routes/users');
 const mongoose = require('mongoose');
-var async = require('async');
+const loggedInCheck = require('./login-check/login-check');
 mongoose.connect('mongodb://localhost/test', { useNewUrlParser: true });
 
 var db = mongoose.connection;
@@ -28,32 +27,8 @@ db.on('error', function (err) {
 })
 
 var app = express();
+app.use(cors());
 
-var Article = require('./schemas/article');
-var article = new Article({
-  title: 'Test',
-  author: 'Test author'
-});
-
-article.save(function (error) {
-  console.log('saved');
-  if (error) {
-    console.log(error);
-  }
-});
-
-var User = require('./schemas/users');
-const users = [
-  { name: 'Lyuda', age: 22 },
-  { name: 'Misha', age: 21 }
-];
-async.each(users, function (userItem) {
-  console.log(userItem);
-  let user = new User(userItem);
-  user.save(function () {
-    console.log(`user ${user.name} saved!`);
-  })
-})
 
 // view engine setup
 app.set('views', path.join(__dirname, 'views'));
@@ -68,59 +43,22 @@ app.use(session({
   secret: 'vfdfjvnjd',
   saveUninitialized: true,
   resave: true,
-  store: new MongoStore({mongooseConnection: mongoose.connection})
+  store: new MongoStore({mongooseConnection: mongoose.connection}),
+  cookie: {
+    httpOnly: true
+}
 }))
 app.use(express.static(path.join(__dirname, 'public')));
 
 app.use('/', indexRouter);
-app.get('/users', function (req, res, next) {
-  User.find({}, function (error, users) {
-    res.json(users);
-  }, function () {
-    
-  })
-});
-app.get('/users/:id', function (req, res, next) {
-  if(req.session.page_views){
-    req.session.page_views++;
-    res.setHeader('Content-Type', 'text/html')
-    res.write('<p>views: ' + req.session.page_views + '</p>')
-    res.write('<p>expires in: ' + (req.session.cookie.maxAge / 1000) + 's</p>')
-    res.end()
-  } else {
-    req.session.page_views = 1;
-    res.end("Welcome to this page for the first time!");
-  }
-  try {
-    var id = new ObjectId(req.params.id);
-    console.log(id);
-  } catch (e) {
-    return next(new HttpError(404, 'User not found111'));
-  }
-
-
-  User.findById(id, function (error, user) {
-    if (!user) {
-      next(new HttpError(404, 'Objecy ID'));
-    } else {
-      res.json(user);
-    }
-
-  })
-})
-app.use('/article', function (req, res) {
-  Article.find({}, function (error, articles) {
-    if (error) {
-      console.log(error);
-    } else {
-      res.render('index', {
-        title: 'Articles',
-        articles: articles
-      })
-    }
-  })
+app.use(require('./routes/users'));
+app.get('/securedPage', loggedInCheck, function (req, resp) {
+  console.log(resp);
+  resp.send('On secured Page!')
 })
 
+app.use(require('./routes/auth'));
+app.use(require('./routes/login'));
 // catch 404 and forward to error handler
 app.use(function(req, res, next) {
   next(createError(404));
