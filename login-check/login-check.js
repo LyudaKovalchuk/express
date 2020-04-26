@@ -3,8 +3,7 @@ function loggedInCheck(req, res, next) {
         next();
         return;
     }
-        var err = new Error("Not logged in!");
-        next(err);  //Error, trying to access unauthorized page!
+    res.status(401).send('User unauthorized!')
 }
 
 module.exports = loggedInCheck;
