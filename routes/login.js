@@ -1,35 +1,27 @@
-var express = require('express');
-var router = express.Router();
+const express = require('express');
+const router = express.Router();
 const bcrypt = require('bcrypt');
 
-var User = require('../schemas/users');
+const User = require('../schemas/users');
+const alreadyLogginCheck = require('../login-check/login-redirect');
 
-router.post('/login', function (req, resp) {
+router.post('/login', alreadyLogginCheck, (req, resp) =>  {
     const { email, pass } = req.body;
-    console.log(email, pass);
 
-    User.findOne({email}).exec(function (error, user) {
-        if (error) {
-            resp.status(401).send('User not found')
-        } else {
-            console.log(user);
-            bcrypt.compare(pass, user.pass, function (err, result) {
-                if (err) {
-                    resp.status(401).send('Error');
-                } else {
-                    if (result === true) {
-                        req.session.loggedIn = true;
-                        console.log(result);
-                        resp.status(200).send('Successfully loggedIn');
-                    } else {
-                        resp.status(401).send('Invalid credentials');
-                    }
-
-                }
-            })
+    User.findOne({email}).exec().then((user) => {
+        if (!user) {
+            resp.status(401).send('User not found');
+            return;
         }
-
-    })
+        bcrypt.compare(pass, user.pass).then((result) => {
+            if (result === true) {
+                req.session.user = user;
+                resp.status(200).send('Successfully loggedIn');
+                return;
+            }
+            resp.status(401).send('Invalid credentials');
+        });
+    }).catch(err => console.log(err));
 });
 
 module.exports = router;

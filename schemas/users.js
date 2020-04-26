@@ -3,12 +3,22 @@ const bcrypt = require('bcrypt');
 
 const usersSchema = mongoose.Schema({
   name: {
-    type: String,
-    required: true
+    type: String
   },
   email: {
     type: String,
-    required: true
+    required: true,
+    validate: {
+      validator: function (value) {
+        return User.find({email: value}).then(value => {
+          if (value.length) {
+            return false;
+          }
+          return true;
+        })
+      },
+      message: 'User already exist'
+    }
   },
   pass: {
     type: String,
@@ -22,13 +32,12 @@ const usersSchema = mongoose.Schema({
 
 usersSchema.pre('save', function (next) {
   const user = this;
-  bcrypt.hash(user.pass, 10, (err, hash) => {
-    if (err) {
-      next();
-    } else {
+  bcrypt.hash(user.pass, 10).then(hash => {
       user.pass = hash;
       next();
-    }
+  }).catch((err) => {
+    console.log(err);
+    next();
   })
 });
 

@@ -1,78 +1,62 @@
-var createError = require('http-errors');
-var express = require('express');
-var path = require('path');
-var cookieParser = require('cookie-parser');
-var bodyParser = require('body-parser');
-var session = require('express-session');
-var logger = require('morgan');
+const createError = require('http-errors');
+const express = require('express');
+
+const cookieParser = require('cookie-parser');
 const cors = require('cors');
 
-var indexRouter = require('./routes/index');
-const mongoose = require('mongoose');
+const logger = require('morgan');
+
 const loggedInCheck = require('./login-check/login-check');
-mongoose.connect('mongodb://localhost/test', { useNewUrlParser: true });
+const session = require('express-session');
+const config = require('.//config/default');
 
-var db = mongoose.connection;
-var HttpError = require('./error/index').HttpError;
-console.log(HttpError);
-db.once('open', function (error) {
-  if (error) {
-    console.log('Eror');
-  } else {
-    console.log('Conection established!!!');
-  }
-})
-db.on('error', function (err) {
-  console.log(err);
-})
-
-var app = express();
-app.use(cors());
+const users = require('./routes/users');
+const auth = require('./routes/auth');
+const login = require('./routes/login');
 
 
-// view engine setup
-app.set('views', path.join(__dirname, 'views'));
-app.set('view engine', 'jade');
 
-app.use(logger('dev'));
-app.use(express.json());
-app.use(express.urlencoded({ extended: false }));
-app.use(cookieParser());
-const MongoStore = require('connect-mongo')(session);
-app.use(session({
-  secret: 'vfdfjvnjd',
-  saveUninitialized: true,
-  resave: true,
-  store: new MongoStore({mongooseConnection: mongoose.connection}),
-  cookie: {
-    httpOnly: true
-}
-}))
-app.use(express.static(path.join(__dirname, 'public')));
+function createApp(mongooseConnection) {
+  var app = express();
+  app.use(cors());
 
-app.use('/', indexRouter);
-app.use(require('./routes/users'));
-app.get('/securedPage', loggedInCheck, function (req, resp) {
-  console.log(resp);
-  resp.send('On secured Page!')
-})
+  app.use(logger('dev'));
+  app.use(express.json());
+  app.use(express.urlencoded({ extended: false }));
+  app.use(cookieParser());
+  const MongoStore = require('connect-mongo')(session);
+  app.use(session({
+    secret: config.Session.Secret,
+    saveUninitialized: true,
+    resave: true,
+    store: new MongoStore({mongooseConnection}),
+    cookie: {
+      httpOnly: config.Session.httpOnly
+    }
+  }));
 
-app.use(require('./routes/auth'));
-app.use(require('./routes/login'));
+
+  app.use(users);
+  app.get('/securedPage', loggedInCheck, (req, resp) => resp.send('On secured Page!'));
+  app.use(auth);
+  app.use(login);
+
 // catch 404 and forward to error handler
-app.use(function(req, res, next) {
-  next(createError(404));
-});
+  app.use((req, res, next) => next(createError(404)));
 
 // error handler
-app.use(function(err, req, res, next) {
-  // set locals, only providing error in development
-  res.locals.message = err.message;
-  res.locals.error = req.app.get('env') === 'development' ? err : {};
+  app.use((err, req, res, next) => {
+    // set locals, only providing error in development
+    res.locals.message = err.message;
+    res.locals.error = req.app.get('env') === 'development' ? err : {};
 
-  // render the error page
-  res.status(err.status || 500);
-  res.render('error');
-});
+    // render the error page
+    res.status(err.status || 500);
+    res.render('error');
+  });
 
-module.exports = app;
+  return app;
+
+}
+
+module.exports = createApp;
