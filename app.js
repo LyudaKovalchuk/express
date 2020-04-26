@@ -8,7 +8,7 @@ const logger = require('morgan');
 
 const loggedInCheck = require('./login-check/login-check');
 const session = require('express-session');
-const config = require('.//config/default');
+const config = require('./config/default');
 
 const users = require('./routes/users');
 const auth = require('./routes/auth');

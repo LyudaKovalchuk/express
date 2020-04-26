@@ -5,12 +5,12 @@ const bcrypt = require('bcrypt');
 const User = require('../schemas/users');
 const alreadyLogginCheck = require('../login-check/login-redirect');
 
-router.post('/login', alreadyLogginCheck, (req, resp) =>  {
+router.post('/login', alreadyLogginCheck, (req, resp, next) =>  {
     const { email, pass } = req.body;
 
     User.findOne({email}).exec().then((user) => {
         if (!user) {
-            resp.status(401).send('User not found');
+            resp.status(400).send('User not found');
             return;
         }
         bcrypt.compare(pass, user.pass).then((result) => {
@@ -19,9 +19,9 @@ router.post('/login', alreadyLogginCheck, (req, resp) =>  {
                 resp.status(200).send('Successfully loggedIn');
                 return;
             }
-            resp.status(401).send('Invalid credentials');
+            resp.status(400).send('Invalid credentials');
         });
-    }).catch(err => console.log(err));
+    }).catch(err => next(err));
 });
 
 module.exports = router;

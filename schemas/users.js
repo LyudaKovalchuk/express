@@ -9,13 +9,8 @@ const usersSchema = mongoose.Schema({
     type: String,
     required: true,
     validate: {
-      validator: function (value) {
-        return User.find({email: value}).then(value => {
-          if (value.length) {
-            return false;
-          }
-          return true;
-        })
+      validator: function (email) {
+        return User.findOne({email}).then(value => !value)
       },
       message: 'User already exist'
     }
@@ -36,8 +31,7 @@ usersSchema.pre('save', function (next) {
       user.pass = hash;
       next();
   }).catch((err) => {
-    console.log(err);
-    next();
+    next(err);
   })
 });
 
