@@ -4,6 +4,11 @@ const router = express.Router();
 const User = require('../schemas/users');
 const ObjectId = require('mongodb').ObjectId;
 const HttpError = require('../error/index').HttpError;
+const loggedInUser = require('../middlewares/login-check/login-check');
+
+router.get('/currentUser', loggedInUser, (req, resp, next) => {
+    resp.status(200).send(req.session.user);
+})
 
 router.get('/users', function (req, res, next) {
   User.find({}, function (error, users) {
