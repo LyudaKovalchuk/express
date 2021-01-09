@@ -19,10 +19,9 @@ const usersSchema = mongoose.Schema({
     type: String,
     required: true
   },
-  age: {
-    type: String,
-    required: false
-  }
+  roles: [{
+    type: String
+  }]
 });
 
 usersSchema.pre('save', function (next) {
