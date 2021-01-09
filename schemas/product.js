@@ -10,7 +10,7 @@ const productSchema = mongoose.Schema({
         required: false
     },
     price: {
-        type: String,
+        type: Number,
         required: false
     },
     file: {
@@ -19,6 +19,12 @@ const productSchema = mongoose.Schema({
         required: false
     }
 });
+
+productSchema.pre('save', function (next) {
+    const product = this;
+    product.price = product.price.toFixed(2);
+    next();
+})
 
 const Product = mongoose.model('Product', productSchema);
 
